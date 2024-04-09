@@ -111,3 +111,34 @@ buildNumber.properties
 
 # Common working directory
 run/
+bin/
+
+# Gradle
+.gradle/
+/build
+/*/build
+/*/*/build
+/*/*/*/build
+/*/*/*/*/build
+/*/docs/src/samples/**/build
+/*/docs/src/snippets/**/build
+/*/internal-android-performance-testing/build-android-libs
+test-splits/
+/gradle/verification-keyring.gpg
+out/
+classes/
+logs/
+
+# VisualStudio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
