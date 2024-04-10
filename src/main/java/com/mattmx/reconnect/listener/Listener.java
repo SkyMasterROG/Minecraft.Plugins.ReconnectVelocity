@@ -11,6 +11,7 @@ import com.velocitypowered.api.event.connection.LoginEvent;
 import com.velocitypowered.api.event.player.KickedFromServerEvent;
 import com.velocitypowered.api.event.player.PlayerChooseInitialServerEvent;
 import com.velocitypowered.api.event.player.ServerConnectedEvent;
+import com.velocitypowered.api.permission.Tristate;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import litebans.api.Database;
@@ -30,7 +31,6 @@ import java.util.concurrent.TimeUnit;
 
 public class Listener {
     private static boolean litebans = false;
-    private static boolean testPermission = false;
 
     static {
         if (Config.DEFAULT.getBoolean("litebans")) {
@@ -60,8 +60,9 @@ public class Listener {
 
         RegisteredServer server;
         FileConfiguration config = Config.DEFAULT;
+
         // Check if they have the basic permission node
-        if (testPermission && !player.hasPermission("velocity.reconnect")) {
+        if ((player.getPermissionValue("velocity.reconnect") == Tristate.FALSE)) {
             logger.warn("{}:hasPermission", player.getUsername());
             return;
         }
