@@ -15,15 +15,17 @@ import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Dependency;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.proxy.ProxyServer;
+import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
+
 import org.slf4j.Logger;
 
 @Plugin(
-        id = "reconnect",
-        name = "ReconnectVelocity",
-        version = "1.3",
-        description = "Reconnect your players to their last server...",
+        id = BuildConstants.BASE_NAME,
+        name = BuildConstants.PROJ_NAME,
+        version = BuildConstants.VERSION,
+        description = BuildConstants.PROJ_DESC,
         url = "https://www.mattmx.com/",
-        authors = {"MattMX"},
+        authors = {"MattMX", "SkyMasterROG"},
         dependencies = { @Dependency(id = "litebans", optional = true) }
 )
 public class ReconnectVelocity extends VelocityPlugin {
@@ -31,15 +33,19 @@ public class ReconnectVelocity extends VelocityPlugin {
     private StorageManager storage;
     private UpdateChecker checker;
 
+    public static final MinecraftChannelIdentifier IDENTIFIER = MinecraftChannelIdentifier.from(BuildConstants.BASE_NAME + ":main");
+
     @Inject
     public ReconnectVelocity(ProxyServer server, Logger logger) {
         this.init(server, logger, "reconnect");
         instance = this;
         Config.init();
+
         StorageManager.addMethod(new MySqlStorage());
         StorageManager.addMethod(new MariaDbStorage());
         StorageManager.addMethod(new SQLiteStorage());
         storage = StorageManager.get(Config.DEFAULT.getString("storage.method"));
+/*
         checker = new UpdateChecker();
         if (checker.get("https://api.github.com/repos/Matt-MX/ReconnectVelocity/releases/latest")
                 .isLatest(this.getClass().getAnnotation(Plugin.class).version())) {
@@ -48,11 +54,13 @@ public class ReconnectVelocity extends VelocityPlugin {
             logger.info("Newer version available! ReconnectVelocity " + checker.getLatest());
             logger.info("Get it here: " + checker.getLink());
         }
+*/
     }
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
         getServer().getEventManager().register(this, new Listener());
+        getServer().getChannelRegistrar().register(IDENTIFIER);
     }
 
     @Subscribe

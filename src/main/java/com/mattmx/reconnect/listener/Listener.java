@@ -1,5 +1,7 @@
 package com.mattmx.reconnect.listener;
 
+import com.google.common.io.ByteArrayDataOutput;
+import com.google.common.io.ByteStreams;
 import com.mattmx.reconnect.ReconnectVelocity;
 import com.mattmx.reconnect.util.Config;
 import com.mattmx.reconnect.util.ReconnectUtil;
@@ -28,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Listener {
     private static boolean litebans = false;
+    private static boolean testPermission = false;
 
     static {
         if (Config.DEFAULT.getBoolean("litebans")) {
@@ -41,21 +44,38 @@ public class Listener {
 
     @Subscribe
     public void choose(PlayerChooseInitialServerEvent e) {
-        if (isForcedHost(e)) return;
+        Logger logger = ReconnectVelocity.get().logger();
+
+        if (isForcedHost(e)) {
+            logger.warn("{}:isForcedHost", e.getInitialServer());
+            return;
+        }
         Player player = e.getPlayer();
         String prev = ReconnectVelocity.get().getStorageManager().get().getLastServer(player.getUniqueId().toString());
 
-        if (this.isBanned(player, prev))
+        if (this.isBanned(player, prev)) {
+            logger.warn("{}:isBanned", player.getUsername());
             return;
+        }
 
         RegisteredServer server;
         FileConfiguration config = Config.DEFAULT;
         // Check if they have the basic permission node
-        if (!player.hasPermission("velocity.reconnect")) return;
+        if (testPermission && !player.hasPermission("velocity.reconnect")) {
+            logger.warn("{}:hasPermission", player.getUsername());
+            return;
+        }
+
         // Check if per-server-premissions is enabled, and check if they have permissions
-        if (config.getBoolean("per-server-permissions") && !player.hasPermission("velocity.reconnect." + prev)) return;
+        if (config.getBoolean("per-server-permissions") && !player.hasPermission("velocity.reconnect." + prev)) {
+            logger.warn("{}:per-server-permissions", player.getUsername());
+            return;
+        }
         // Check if the server is blacklisted
-        if (config.getStringList("blacklist").contains(prev)) return;
+        if (config.getStringList("blacklist").contains(prev)) {
+            logger.warn("{}:blacklist", prev);
+            return;
+        }
         // Not null check
         if (prev != null) {
             // Get the RegisteredServer
@@ -66,19 +86,57 @@ public class Listener {
                     // Make sure they can join
                     server.ping();
                 } catch (CancellationException | CompletionException exception) {
+                    logger.error("{}:not-available", prev);
+                    
                     if (config.getBoolean("not-available")) {
                         ReconnectVelocity.get().getServer().getScheduler().buildTask(ReconnectVelocity.get(), () -> {
-                            config.getStringList("not-available-message").forEach(l -> player.sendMessage(VelocityChat.color(l, player), MessageType.SYSTEM));
+                            List<String> sl = config.getStringList("not-available-message");
+                            for (String s : sl) {
+                                ByteArrayDataOutput out = ByteStreams.newDataOutput();
+                                out.writeUTF("MessageRaw");
+                                out.writeUTF(player.getUsername());
+
+                                out.writeUTF(VelocityChat.color(s, player).toString());
+                                ReconnectVelocity.get().getServer().sendMessage(VelocityChat.color(s, player));
+
+                                player.sendPluginMessage(ReconnectVelocity.IDENTIFIER, out.toByteArray());
+                                
+                            }
                         }).delay(1, TimeUnit.SECONDS).schedule();
                     }
+                    
+                    //if (config.getBoolean("not-available")) {
+                    //    ReconnectVelocity.get().getServer().getScheduler().buildTask(ReconnectVelocity.get(), () -> {
+                    //        config.getStringList("not-available-message").forEach(l -> player.sendMessage(VelocityChat.color(l, player), MessageType.SYSTEM));
+                    //    }).delay(1, TimeUnit.SECONDS).schedule();
+                    //}
                     return;
                 }
+
                 e.setInitialServer(server);
+                logger.info("setInitialServer={}", server.getServerInfo().getName());
+
                 if (config.getBoolean("message-on-reconnect") && !prev.equalsIgnoreCase(config.getString("fallback"))) {
                     ReconnectVelocity.get().getServer().getScheduler().buildTask(ReconnectVelocity.get(), () -> {
-                        config.getStringList("reconnect-message").forEach(l -> player.sendMessage(VelocityChat.color(l, player) ,MessageType.SYSTEM));
+                        List<String> sl = config.getStringList("reconnect-message");
+                        for (String s : sl) {
+                            ByteArrayDataOutput out = ByteStreams.newDataOutput();
+                            out.writeUTF("MessageRaw");
+                            out.writeUTF(player.getUsername());
+
+                            out.writeUTF(VelocityChat.color(s, player).toString());
+                            ReconnectVelocity.get().getServer().sendMessage(VelocityChat.color(s, player));
+
+                            player.sendPluginMessage(ReconnectVelocity.IDENTIFIER, out.toByteArray());
+                            
+                        }
                     }).delay(1, TimeUnit.SECONDS).schedule();
                 }
+                //if (config.getBoolean("message-on-reconnect") && !prev.equalsIgnoreCase(config.getString("fallback"))) {
+                //    ReconnectVelocity.get().getServer().getScheduler().buildTask(ReconnectVelocity.get(), () -> {
+                //        config.getStringList("reconnect-message").forEach(l -> player.sendMessage(VelocityChat.color(l, player) ,MessageType.SYSTEM));
+                //    }).delay(1, TimeUnit.SECONDS).schedule();
+                //}
             }
         }
     }
@@ -97,19 +155,25 @@ public class Listener {
                 .getConfiguration().getAttemptConnectionOrder();
         Optional<String> defaultServerOptional = getFirstAvailableServer(attemptConnectionOrder);
         logger.debug("Default server: {}", defaultServerOptional);
+        logger.info("DBG; Default server: {}", defaultServerOptional);
 
         Optional<RegisteredServer> joiningServerOptional = e.getInitialServer();
         logger.debug("Joining server: {}", joiningServerOptional);
+        logger.info("DBG; Joining server: {}", joiningServerOptional);
 
         if (joiningServerOptional.isPresent() && defaultServerOptional.isPresent()) {
             if (joiningServerOptional.get().getServerInfo().getName().equals(defaultServerOptional.get())) {
                 logger.debug("Player connecting to default server {}, assuming not a forced host",
-                        defaultServerOptional.get());
+                    defaultServerOptional.get());
                 // TODO: It's possible that the player is connecting to the default server on purpose i.e.
                 //  via a forced host. This method won't work in that case.
+                logger.info("DBG; Player connecting to default server {}, assuming not a forced host",
+                    defaultServerOptional.get());
             } else {
                 logger.debug("Player connecting to non-default server {}, is forced host",
-                        joiningServerOptional.get().getServerInfo().getName());
+                    joiningServerOptional.get().getServerInfo().getName());
+                logger.info("DBG; Player connecting to non-default server {}, is forced host",
+                    joiningServerOptional.get().getServerInfo().getName());
                 return true;
             }
         }
@@ -138,13 +202,15 @@ public class Listener {
 
     @Subscribe
     public void login(LoginEvent e) {
-        if (e.getPlayer().hasPermission("velocity.reconnect.admin")) {
+        Logger logger = ReconnectVelocity.get().logger();
+        logger.info("LoginPing={}", e.getPlayer().getPing());
+        /*if (e.getPlayer().hasPermission("velocity.reconnect.admin")) {
             if (!ReconnectVelocity.get().getUpdateChecker().isLatest()) {
                 e.getPlayer().sendMessage(VelocityChat.color("&6&lReconnect &7» &9Newer version available! &fReconnect v" + ReconnectVelocity.get().getUpdateChecker().getLatest())
                         .clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, ReconnectVelocity.get().getUpdateChecker().getLink()))
                         .hoverEvent(HoverEvent.showText(VelocityChat.color("&6Click to update!"))), MessageType.SYSTEM);
             }
-        }
+        } */
     }
 
     /**
