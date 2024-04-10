@@ -76,11 +76,29 @@ jar {
     // https://stackoverflow.com/questions/4871656/using-gradle-to-build-a-jar-with-dependencies
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    /*manifest {
-        attributes "Main-Class": "com.mattmx.reconnect.ReconnectVelocity"
-    }*/
+    //manifest {
+    //    attributes "Main-Class": "com.mattmx.reconnect.ReconnectVelocity"
+    //}
 
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
 }
+
+def templateSource = file('src/main/templates')
+def templateDest = layout.buildDirectory.dir('generated/sources/templates')
+def generateTemplates = tasks.register('generateTemplates', Copy) { task ->
+    def props = [
+            'version': project.version,
+            'base_name': project.archives_base_name,
+            'proj_name': rootProject.name,
+            'description': project.description
+    ]
+    task.inputs.properties props
+
+    task.from templateSource
+    task.into templateDest
+    task.expand props
+}
+
+sourceSets.main.java.srcDir(generateTemplates.map { it.outputs })

@@ -114,7 +114,7 @@ run/
 bin/
 
 # Gradle
-.gradle/
+.gradle
 /build
 /*/build
 /*/*/build
@@ -130,7 +130,7 @@ classes/
 logs/
 
 # VisualStudio Code
-.vscode/*
+.vscode
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
