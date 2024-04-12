@@ -75,7 +75,7 @@ tasks.withType(Javadoc).configureEach {
 
 jar {
 	// https://stackoverflow.com/questions/4871656/using-gradle-to-build-a-jar-with-dependencies
-	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	duplicatesStrategy = DuplicatesStrategy.INCLUDE
 
 	//manifest {
 	//	attributes "Main-Class": "com.mattmx.reconnect.ReconnectVelocity"
