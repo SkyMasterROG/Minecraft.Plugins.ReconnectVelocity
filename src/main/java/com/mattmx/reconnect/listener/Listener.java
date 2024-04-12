@@ -61,22 +61,36 @@ public class Listener {
         RegisteredServer server;
         FileConfiguration config = Config.DEFAULT;
 
-        // Check if they have the basic permission node
-        if ((player.getPermissionValue("velocity.reconnect") == Tristate.FALSE)) {
-            logger.warn("{}:hasPermission", player.getUsername());
+        // Check if ignore-basic-permissions, and check if they have the basic permission node
+        // permission provider required
+        if(!config.getBoolean("ignore-basic-permissions") && (player.getPermissionValue("velocity.reconnect") == Tristate.FALSE)) {
+            if(logger.isDebugEnabled()) {
+                logger.warn("basic permission: {}={}", player.getUsername(),
+            		player.getPermissionValue("velocity.reconnect"));
+			}
             return;
         }
 
         // Check if per-server-premissions is enabled, and check if they have permissions
         if (config.getBoolean("per-server-permissions") && !player.hasPermission("velocity.reconnect." + prev)) {
-            logger.warn("{}:per-server-permissions", player.getUsername());
+            if(logger.isDebugEnabled()) {
+                logger.warn("per-server-permissions: {}, {}={}({})",
+                    prev,
+                    player.getUsername(),
+                    player.hasPermission("velocity.reconnect." + prev),
+                    player.getPermissionValue("velocity.reconnect." + prev));
+            }
             return;
         }
+
         // Check if the server is blacklisted
         if (config.getStringList("blacklist").contains(prev)) {
-            logger.warn("{}:blacklist", prev);
+            if(logger.isDebugEnabled()) {
+                logger.warn("blacklisted: {}", prev);
+            }
             return;
         }
+        
         // Not null check
         if (prev != null) {
             // Get the RegisteredServer

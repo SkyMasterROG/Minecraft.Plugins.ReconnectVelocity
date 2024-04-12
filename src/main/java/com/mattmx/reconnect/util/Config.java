@@ -11,6 +11,7 @@ public class Config {
 
     public static void init() {
         DEFAULT = get(DEFAULT_PATH, "config.yml");
+		// TODO: read-write configuration file for update, optional with comments
     }
 
     public static void save(YamlConfiguration config, String dest) {
